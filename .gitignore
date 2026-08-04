@@ -1,2 +1,7 @@
+# Shared by every project in this repo
 .env
 .venv/
+
+# Python noise, wherever it appears
+__pycache__/
+*.pyc

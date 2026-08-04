@@ -1,6 +1,3 @@
-__pycache__/
-*.pyc
-
 # Local-only working notes. Stays on this machine, never pushed.
 misc/
 
