@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+
+# Local-only working notes. Stays on this machine, never pushed.
+misc/
+
+# Generated reports are run artefacts, not source. Remove this line if you would
+# rather keep them in version control.
+output/*.md
