@@ -113,7 +113,8 @@ authoritative and why.
 
 RESEARCH_DIMENSIONS = """
 - Current state and structure of the sector (size, output, employment, key segments)
-- Competitive landscape and leading firms
+- Competitive structure: how the market is organised, segmented and contested,
+  described at market level rather than firm by firm
 - Market concentration (CR4 / HHI or a qualitative structure read if unavailable)
 - Regulatory environment and recent or pending regulatory change
 - Macroeconomic outlook and its transmission into this sector
@@ -187,10 +188,30 @@ related ones so you stay within eight goals:
 {RESEARCH_DIMENSIONS}
 
 At least one goal must be `[DELIVERABLE]`. Good deliverables for this domain: a
-sector-size table with sources, a leading-firms table, a SWOT matrix, a risk
+sector-size table with sources, a segment breakdown, a SWOT matrix, a risk
 register scored by likelihood and impact, a regulatory timeline.
 
-**3. One line inviting the user to add, remove or change goals.**
+### Company-level analysis is opt-in
+
+**Do not propose goals about named individual companies unless the user asked for
+them.** Analyse the market, not its constituent firms: concentration, segment
+structure, barriers to entry, ownership patterns and competitive dynamics can all
+be covered without profiling companies one by one.
+
+Naming a firm in passing is fine where it is unavoidable to explain the market -
+"the incumbent operator, privatised in 2004" - but company profiles, per-firm
+revenue tables and financial-health assessments of individual businesses are a
+different exercise, and one the user has not asked for by default.
+
+**3. A short line offering company coverage as an option**, so the choice is
+explicit rather than assumed. For example: *"This plan analyses market structure
+without profiling individual companies - say the word if you want named
+competitors, market shares or company financials included."*
+
+If the user does ask for it, add the relevant goals tagged `[NEW]`, and say in the
+scope line that company-level analysis is included.
+
+**4. One line inviting the user to add, remove or change goals.**
 
 {TAG_VOCABULARY}
 
@@ -230,8 +251,12 @@ Rules:
   before competition and concentration, current state before outlook and risk.
 - `[DELIVERABLE]` goals become named artefacts inside a section - say which section
   carries which table or matrix.
-- Do not write any of the report's content here, and do not number sections with
-  a citation-like syntax.
+- Do not write any of the report's content here.
+- **Title sections by their subject alone.** Write `Executive summary`, not
+  `Section 1: Executive summary`. Your titles are copied into the report as its
+  headings, and numbering labels leak through and read as scaffolding.
+- Keep titles short. `Competitive structure and concentration` is a heading;
+  `Competitive Landscape, Market Structure, and Major Players` is a sentence.
 
 The target length was fixed in the approved plan. Give each section an approximate
 word budget that sums to it, so the writer knows where the weight goes.
@@ -261,8 +286,14 @@ CPC, Eurostat, or the sector regulator over generic queries that return trade pr
 Where a national figure is likely to exist only in Bulgarian, search in Bulgarian.
 
 For `[DELIVERABLE]` goals, gather the specific inputs the artefact needs - a
-leading-firms table needs firm names, revenues, a reference year and a source for
-each row, so go and find those rows.
+segment-size table needs a figure, period and source for every row, so go and find
+those rows.
+
+**Stay at market level unless the approved plan says otherwise.** Do not gather
+company profiles, per-firm revenues or financial assessments of individual
+businesses unless a goal explicitly calls for them. Concentration and structure
+are market facts and are always in scope; company research is a separate exercise
+the user opts into.
 
 **Phase 2 - synthesise.** Organise everything you found under the outline's
 sections. For each section produce:
@@ -438,9 +469,18 @@ End with **Data quality and limitations**, covering:
 This section is not boilerplate. It is what makes the rest of the report
 trustworthy, and a reader who checks nothing else will check this.
 
-Start the report with a single `#` H1 giving the sector and market - for example
-`# Tourism in Bulgaria: Market and Economic Analysis`. Output the report in
-markdown and nothing else: no preamble, no sign-off, no notes to the user.
+## Headings
+
+- One `#` H1 at the very top, giving sector and market - for example
+  `# Tourism in Bulgaria: Market and Economic Analysis`.
+- Each outline section is a `##`. Subsections are `###`.
+- **No numbering prefixes.** `## Executive summary`, never
+  `### Section 1: Executive Summary`.
+- Use real headings for structure. Do not use a bold line where a `###` belongs -
+  bold text does not appear in a table of contents and cannot be linked to.
+
+Output the report in markdown and nothing else: no preamble, no sign-off, no notes
+to the user.
 """ + """
 ## The approved plan
 
