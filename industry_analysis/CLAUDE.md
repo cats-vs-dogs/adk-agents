@@ -234,6 +234,11 @@ on 4-5 Aug 2026 (Cloud auth, `global` endpoint).
 Runs 1-3 predate the append-only redesign; 4-5 follow it. Passing runs are both
 cheaper and better, because the expense was the loop failing to converge.
 
+**[RUN_HISTORY.md](RUN_HISTORY.md) holds the full measurements** — per-agent
+tokens, query counts, verdict-length progressions, and the evidence-base size
+traces that diagnosed the rewrite problem. The session database those came from
+stays on the original machine, so that file is the record.
+
 Also verified: `adk web` discovers the agent (`/list-apps` returns
 `["industry_analysis"]`), and the callbacks are unit-tested with stubs — source
 dedup, id stability across rounds, all three `<cite>` tag forms, hallucinated-id
