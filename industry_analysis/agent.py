@@ -34,8 +34,10 @@ from typing import Literal, Optional
 
 from google.adk.agents import BaseAgent, LlmAgent, LoopAgent, SequentialAgent
 from google.adk.agents.callback_context import CallbackContext
+from google.adk.agents.context import Context
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
+from google.adk.models.llm_response import LlmResponse
 from google.adk.planners import BuiltInPlanner
 from google.adk.tools import google_search
 from google.adk.tools.agent_tool import AgentTool
@@ -43,7 +45,12 @@ from google.genai import types as genai_types
 from pydantic import BaseModel, Field
 
 from . import prompts
-from .config import config
+from .config import (
+    MODEL_PRICING,
+    SEARCH_COST_PER_1K_REQUESTS,
+    SEARCH_FREE_REQUESTS_PER_MONTH,
+    config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +88,132 @@ class Feedback(BaseModel):
     follow_up_queries: Optional[list[SearchQuery]] = Field(
         default=None, description="Queries that would close the gaps. Omit on pass."
     )
+
+
+# ---------------------------------------------------------------------------
+# Cost tracking
+# ---------------------------------------------------------------------------
+
+
+def track_model_usage_callback(
+    callback_context: Context, llm_response: LlmResponse
+) -> None:
+    """Accumulate token usage per agent after every model call.
+
+    Attached to all LlmAgents. Returning None leaves the response untouched -
+    this callback only observes.
+
+    Thinking tokens are billed as output, so they are counted there rather than
+    reported separately.
+    """
+    usage = getattr(llm_response, "usage_metadata", None)
+    if not usage:
+        return None
+
+    agent = callback_context.agent_name
+    totals: dict = callback_context.state.get("token_usage", {})
+    entry = totals.setdefault(
+        agent, {"model": "", "input": 0, "output": 0, "calls": 0}
+    )
+
+    entry["model"] = llm_response.model_version or entry["model"]
+    entry["input"] += usage.prompt_token_count or 0
+    entry["output"] += (usage.candidates_token_count or 0) + (
+        usage.thoughts_token_count or 0
+    )
+    entry["calls"] += 1
+
+    callback_context.state["token_usage"] = totals
+
+    cost = _agent_cost(entry)
+    logger.info(
+        "[cost] %-26s call %-2d | in %7d | out %6d | running $%.4f",
+        agent,
+        entry["calls"],
+        entry["input"],
+        entry["output"],
+        cost,
+    )
+    return None
+
+
+def _price_for(model: str) -> dict:
+    """Pricing for a model id, tolerating version suffixes and unknown models."""
+    if model in MODEL_PRICING:
+        return MODEL_PRICING[model]
+    for known, prices in MODEL_PRICING.items():
+        if model.startswith(known) or known.startswith(model):
+            return prices
+    return {"input": 0.0, "output": 0.0}
+
+
+def _agent_cost(entry: dict) -> float:
+    prices = _price_for(entry.get("model", ""))
+    return (
+        entry["input"] * prices["input"] + entry["output"] * prices["output"]
+    ) / 1_000_000
+
+
+def _count_search_requests(callback_context: CallbackContext) -> int:
+    """Grounded search calls in this session, for the separate search charge."""
+    return sum(
+        1
+        for event in callback_context.session.events
+        if event.grounding_metadata and event.grounding_metadata.grounding_chunks
+    )
+
+
+def format_cost_report(callback_context: CallbackContext) -> str:
+    """Markdown cost breakdown with a bar chart, ordered most expensive first."""
+    totals: dict = callback_context.state.get("token_usage", {})
+    if not totals:
+        return ""
+
+    rows = sorted(
+        ((name, e, _agent_cost(e)) for name, e in totals.items()),
+        key=lambda r: r[2],
+        reverse=True,
+    )
+    grand_total = sum(cost for _, _, cost in rows)
+    peak = max((cost for _, _, cost in rows), default=0.0)
+
+    lines = [
+        "## Run cost estimate",
+        "",
+        "| Agent | Model | Calls | Input | Output | Cost | Share |",
+        "|---|---|---:|---:|---:|---:|---|",
+    ]
+    for name, entry, cost in rows:
+        bar = "#" * max(1, round((cost / peak) * 18)) if peak else ""
+        share = (cost / grand_total * 100) if grand_total else 0
+        model = entry.get("model") or "?"
+        lines.append(
+            f"| {name} | `{model}` | {entry['calls']} | "
+            f"{entry['input']:,} | {entry['output']:,} | "
+            f"${cost:.4f} | `{bar}` {share:.0f}% |"
+        )
+
+    total_in = sum(e["input"] for _, e, _ in rows)
+    total_out = sum(e["output"] for _, e, _ in rows)
+    lines.append(
+        f"| **Total** | | | **{total_in:,}** | **{total_out:,}** | "
+        f"**${grand_total:.4f}** | |"
+    )
+
+    searches = _count_search_requests(callback_context)
+    search_cost = searches / 1000 * SEARCH_COST_PER_1K_REQUESTS
+    lines += [
+        "",
+        f"Grounded search: **{searches} requests**. The first "
+        f"{SEARCH_FREE_REQUESTS_PER_MONTH:,}/month are free across all Gemini 3.x "
+        f"models, so these cost **$0** unless that allowance is already spent - "
+        f"beyond it they would add ${search_cost:.2f} "
+        f"(${SEARCH_COST_PER_1K_REQUESTS:.0f} per 1,000).",
+        "",
+        "*Token counts are exact, reported by the API. Prices are from "
+        "`config.py` and may drift - treat the dollar figures as an estimate.*",
+    ]
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -160,9 +293,16 @@ def finalize_report_callback(
     report = re.sub(r"[ \t]+([.,;:])", r"\1", report)  # tidy space before punctuation
     report = re.sub(r"</?cite[^>]*>", "", report)  # sweep up any malformed leftovers
 
-    saved_path = _save_report(report, used)
+    cost_report = format_cost_report(callback_context)
+
+    # The saved file gets the report plus sources; the cost block goes in too,
+    # so a report on disk always carries what it cost to produce.
+    saved_path = _save_report(report, used, cost_report)
+
+    if cost_report:
+        report += "\n\n---\n\n" + cost_report
     if saved_path:
-        report += f"\n\n---\n*Saved to `{saved_path.name}`*"
+        report += f"\n\n*Saved to `{saved_path.name}`*"
 
     callback_context.state["final_cited_report"] = report
     return genai_types.Content(parts=[genai_types.Part(text=report)])
@@ -186,7 +326,9 @@ def _slug_from_report(report: str) -> str:
     return slug[:60] or "industry-analysis"
 
 
-def _save_report(report: str, used_sources: dict) -> Optional[pathlib.Path]:
+def _save_report(
+    report: str, used_sources: dict, cost_report: str = ""
+) -> Optional[pathlib.Path]:
     """Write the report plus a sources appendix to output/, never overwriting."""
     try:
         config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -205,6 +347,8 @@ def _save_report(report: str, used_sources: dict) -> Optional[pathlib.Path]:
                 f"- {sid}: [{entry['title']}]({entry['url']})"
                 for sid, entry in _sorted_sources(used_sources)
             ]
+        if cost_report:
+            body += ["", "---", "", cost_report]
 
         path.write_text("\n".join(body), encoding="utf-8")
         logger.info("Report saved to %s", path)
@@ -247,6 +391,7 @@ plan_generator = LlmAgent(
     description="Drafts and revises the tagged research plan the user approves.",
     instruction=prompts.PLAN_GENERATOR,
     tools=[google_search],
+    after_model_callback=track_model_usage_callback,
 )
 
 section_planner = LlmAgent(
@@ -255,6 +400,7 @@ section_planner = LlmAgent(
     description="Turns the approved plan into a report outline.",
     instruction=prompts.SECTION_PLANNER,
     output_key="report_sections",
+    after_model_callback=track_model_usage_callback,
 )
 
 section_researcher = LlmAgent(
@@ -268,6 +414,7 @@ section_researcher = LlmAgent(
     tools=[google_search],
     output_key="section_research_findings",
     after_agent_callback=collect_research_sources_callback,
+    after_model_callback=track_model_usage_callback,
 )
 
 research_evaluator = LlmAgent(
@@ -281,6 +428,7 @@ research_evaluator = LlmAgent(
     include_contents="none",
     disallow_transfer_to_parent=True,
     disallow_transfer_to_peers=True,
+    after_model_callback=track_model_usage_callback,
 )
 
 enhanced_search_executor = LlmAgent(
@@ -292,6 +440,7 @@ enhanced_search_executor = LlmAgent(
     output_key="section_research_findings",
     include_contents="none",
     after_agent_callback=collect_research_sources_callback,
+    after_model_callback=track_model_usage_callback,
 )
 
 report_composer = LlmAgent(
@@ -302,6 +451,7 @@ report_composer = LlmAgent(
     output_key="final_cited_report",
     include_contents="none",
     after_agent_callback=finalize_report_callback,
+    after_model_callback=track_model_usage_callback,
 )
 
 research_pipeline = SequentialAgent(
@@ -337,6 +487,7 @@ interactive_planner_agent = LlmAgent(
     tools=[AgentTool(plan_generator)],
     sub_agents=[research_pipeline],
     output_key="research_plan",
+    after_model_callback=track_model_usage_callback,
 )
 
 root_agent = interactive_planner_agent

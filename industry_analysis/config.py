@@ -39,3 +39,19 @@ class ResearchConfiguration:
 
 
 config = ResearchConfiguration()
+
+
+# USD per 1M tokens, used for the run-cost estimate shown after each report.
+# Checked against the Gemini pricing page on 4 Aug 2026 - update when it moves.
+# Caveat: the Pro tier charges more for prompts over 200k tokens ($4/$18) than
+# the rates below, so a very large run is under-estimated rather than over.
+MODEL_PRICING = {
+    "gemini-3.1-pro-preview": {"input": 2.00, "output": 12.00},
+    "gemini-3.6-flash": {"input": 1.50, "output": 7.50},
+}
+
+# Grounded search is billed per request beyond a monthly allowance shared across
+# all Gemini 3.x models. Reported separately from token cost, because whether it
+# actually costs anything depends on the whole month's usage, not this one run.
+SEARCH_FREE_REQUESTS_PER_MONTH = 5_000
+SEARCH_COST_PER_1K_REQUESTS = 14.00

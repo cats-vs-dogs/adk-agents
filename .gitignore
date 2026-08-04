@@ -5,3 +5,7 @@
 # Python noise, wherever it appears
 __pycache__/
 *.pyc
+
+# ADK writes a per-agent session store here when you run `adk web`.
+# Run artefact, and it contains the full conversation - never commit it.
+.adk/

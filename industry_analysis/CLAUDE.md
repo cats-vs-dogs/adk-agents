@@ -39,7 +39,45 @@ Data moves between agents through **session state**, injected into instructions
 with `{key?}` placeholders (the `?` makes a missing key render empty instead of
 raising). State keys: `research_plan`, `report_sections`,
 `section_research_findings`, `research_evaluation`, `sources`,
-`citation_sources`, `final_cited_report`.
+`citation_sources`, `final_cited_report`, `token_usage`.
+
+## Cost tracking
+
+`track_model_usage_callback` is an `after_model_callback` on all seven LlmAgents.
+It accumulates `usage_metadata` per agent into `state["token_usage"]` and logs a
+running line to the terminal after every model call. `format_cost_report` renders
+the breakdown, which `finalize_report_callback` appends to both the chat reply and
+the saved `.md`.
+
+Notes for anyone changing it:
+- **Thinking tokens are billed as output**, so `thoughts_token_count` is added to
+  the output figure rather than reported separately.
+- Token counts are exact (from the API); prices come from `MODEL_PRICING` in
+  `config.py` and go stale — that is why the output says "estimate".
+- Unknown or version-suffixed model ids degrade gracefully: `_price_for` falls
+  back to prefix matching, then to zero, rather than raising mid-run.
+- Grounded-search requests are counted and priced separately, because whether
+  they cost anything depends on the month's total against the free allowance.
+- **Add `after_model_callback=track_model_usage_callback` to any new LlmAgent**,
+  or its cost silently vanishes from the total.
+
+### Mining a past run
+
+`adk web` persists sessions to `industry_analysis/.adk/session.db` (SQLite,
+gitignored). The `events` table holds one JSON blob per event, each carrying
+`author`, `usage_metadata` and `grounding_metadata` — so a finished run can be
+analysed after the fact even without the cost callback:
+
+```python
+import sqlite3, json
+for (data,) in sqlite3.connect(".adk/session.db").execute("SELECT event_data FROM events"):
+    e = json.loads(data)
+    print(e.get("author"), e.get("usage_metadata"))
+```
+
+Counting calls per agent is the quickest way to tell whether the refinement loop
+exited on a `pass` or ran out of iterations: equal call counts for
+`research_evaluator` and `enhanced_search_executor` mean the critic never passed.
 
 The loop agents and the composer set `include_contents="none"` — they work purely
 from injected state, not conversation history. If you add an agent that seems to
