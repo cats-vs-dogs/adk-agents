@@ -60,6 +60,39 @@ collapsing the whole job into a single grounded pass: it cannot quietly skip
 searching when a numbered list of searches is sitting in its context and a log of
 them is what it will be graded on. Keep that separation if you refactor.
 
+**It worked**: on the next run `section_researcher` issued 33 queries instead of
+12, and the run as a whole 72 instead of 48, retrieving 118 grounding chunks
+against 63.
+
+### Measuring search volume correctly
+
+Count `grounding_metadata.web_search_queries`, **not** grounding events. Gemini's
+built-in `google_search` issues many queries inside a single model call, so events
+count model calls, not searches. Judging the pipeline by event count understates
+it by roughly an order of magnitude — a mistake that once led to the wrong
+diagnosis here.
+
+## Fabrication control
+
+The critic detects invented figures by cross-checking them against the search log.
+That detection is worthless unless something acts on it, so:
+
+- `research_evaluator` must **quote the offending figure verbatim**, because its
+  comment is what the next agent uses to hunt the figure down.
+- `enhanced_search_executor` has exactly two permitted responses to a flagged
+  figure: source it, or **delete it** and record a declared gap. Hedging it into
+  "approximately" counts as keeping it.
+- `report_composer` must not publish an unsourced figure at all, hedged or
+  otherwise.
+- `finalize_report_callback` prepends a warning banner whenever the final grade is
+  not `pass`, driven by `state["research_evaluation"]` rather than by asking the
+  composer to admit it. An absent or missing grade is treated as *not* passed —
+  fail closed, never silently clean.
+
+This exists because a live run shipped three figures the critic had explicitly
+named as fabricated, each wearing a citation that made it indistinguishable from a
+sourced one.
+
 ## Cost tracking
 
 `track_model_usage_callback` is an `after_model_callback` on all seven LlmAgents.

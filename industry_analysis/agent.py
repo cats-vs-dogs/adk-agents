@@ -293,6 +293,9 @@ def finalize_report_callback(
     report = re.sub(r"[ \t]+([.,;:])", r"\1", report)  # tidy space before punctuation
     report = re.sub(r"</?cite[^>]*>", "", report)  # sweep up any malformed leftovers
 
+    # A report that failed review must not look like one that passed.
+    report = _insert_after_title(report, _review_banner(callback_context))
+
     cost_report = format_cost_report(callback_context)
 
     # The saved file gets the report plus sources; the cost block goes in too,
@@ -311,6 +314,42 @@ def finalize_report_callback(
 # ---------------------------------------------------------------------------
 # Report saving
 # ---------------------------------------------------------------------------
+
+
+def _review_banner(callback_context: CallbackContext) -> str:
+    """Warning for a report that never passed review, built from the real grade.
+
+    Deterministic on purpose: whether the evidence was accepted is a fact in
+    state, so it is not left to the composer to volunteer.
+    """
+    evaluation = callback_context.state.get("research_evaluation") or {}
+    if evaluation.get("grade") == "pass":
+        return ""
+
+    comment = (evaluation.get("comment") or "").strip()
+    lines = [
+        "> [!WARNING]",
+        "> **This report did not pass its own quality review.**",
+        ">",
+        f"> The research loop ran all {config.max_search_iterations} refinement "
+        "rounds without the reviewer accepting the evidence base. Figures here "
+        "may be unsourced despite carrying citations - verify anything you intend "
+        "to rely on.",
+    ]
+    if comment:
+        lines += [">", "> The reviewer's final objection:", ">", f"> *{comment}*"]
+    return "\n".join(lines)
+
+
+def _insert_after_title(report: str, block: str) -> str:
+    """Put a block just below the H1, so the title still leads."""
+    if not block:
+        return report
+    match = re.search(r"^#\s+.+$", report, re.MULTILINE)
+    if not match:
+        return f"{block}\n\n{report}"
+    end = match.end()
+    return f"{report[:end]}\n\n{block}{report[end:]}"
 
 
 def _sorted_sources(sources: dict) -> list:

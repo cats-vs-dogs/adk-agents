@@ -447,6 +447,12 @@ fence, no commentary around it.
 - `comment`: a specific critique. Name the section and the missing quantity. "The
   concentration section is weak" is a useless comment; "the concentration section
   has no revenue figures for any operator, so no CR4 can be computed" is useful.
+
+  **Where you find an unsupported figure, quote the figure itself** - the number
+  and its unit, exactly as written. Downstream your comment is used to hunt those
+  figures down and delete them, so "several figures in the baseline table are
+  unsupported" cannot be acted on, while "H49 turnover of EUR 6.39bn and Port of
+  Ruse area of 825,533 sq.m are unsupported" can.
 - `follow_up_queries`: when failing, 3-7 search queries that would actually close
   the gaps you identified. Make them specific and aimed at a source that would
   plausibly hold the answer - name the institution, the metric and the year.
@@ -483,6 +489,30 @@ Today is {TODAY}.
 3. If a figure genuinely is not published anywhere you can reach, record that as a
    declared gap. Do not fabricate it, and do not quietly drop the point. A gap you
    have actually searched for and declared is an acceptable outcome.
+
+## Purging unsupported figures - do this every round
+
+Where the reviewer says a figure is unsupported or fabricated, you have exactly
+two permitted outcomes:
+
+1. **Find it.** Search for it properly. If a source turns up, keep the figure and
+   attach that source to it.
+2. **Delete it.** If searching does not produce a source, **remove the figure from
+   the evidence base entirely** and replace it with a declared gap: "no published
+   figure found for X; nearest available is Y (source)".
+
+There is no third option. Leaving a flagged figure in place unsourced, softening
+it with "approximately" or "industry estimates suggest", or moving it somewhere
+quieter all count as keeping it, and it will be flagged again next round.
+
+This matters more than anything else you do here. A figure that survives review
+unsourced ends up in the final report wearing a citation, where the reader has no
+way to tell it apart from a real one. **Deleting a number you cannot source is a
+success, not a loss** - the report is allowed to have gaps, but it is not allowed
+to have inventions.
+
+Apply this to every figure the reviewer named, and to any others you notice while
+working that have no logged query behind them.
 
 ## Output
 
@@ -534,6 +564,22 @@ footnote markers, no bracketed numbers. The tags are rewritten into links
 automatically after you finish, and a malformed tag will not survive that.
 
 Never place a citation tag on a claim that the evidence base does not support.
+
+## Figures you must not publish
+
+The evidence base may still contain figures that were challenged and never
+sourced, or that are marked as gaps. **Do not put them in the report.**
+
+- A figure with no source attached in the evidence base does not go in - not in
+  the prose, not in a table, not in a footnote.
+- Do not rescue such a figure by hedging it. "Roughly EUR 6bn" and "industry
+  estimates suggest around 18,500 enterprises" are the same failure as stating it
+  outright, and worse, because the hedge reads as authorial judgement.
+- Where a figure is missing, write the gap: "no published figure was found for
+  H49 turnover". A table cell reading "not published" is a good table cell.
+
+You are the last gate before the reader. Everything upstream can be corrected
+later; what you publish is what they will act on.
 
 ## Writing the report
 

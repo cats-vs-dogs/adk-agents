@@ -30,8 +30,12 @@ class ResearchConfiguration:
     critic_model: str = "gemini-3.1-pro-preview"
     worker_model: str = "gemini-3.6-flash"
 
-    # 3 rather than the sample's 5, to keep prototype runs affordable.
-    max_search_iterations: int = 3
+    # Raised from 3 once the refinement loop gained the ability to *delete*
+    # unsourced figures rather than only add findings. Extra rounds only help a
+    # loop that can converge; before that they were paying to restate the same
+    # unsupported numbers. The loop still exits early the moment the critic
+    # passes, so this is a ceiling, not a target.
+    max_search_iterations: int = 5
 
     default_market: str = "Bulgaria"
 
