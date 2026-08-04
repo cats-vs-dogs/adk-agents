@@ -71,10 +71,13 @@ from injected state, not conversation history. If you add an agent that seems to
   entirely**. A `DefaultCredentialsError` despite a valid key means the flag is
   still `1`. Both setups can live in `.env` at once. See README for the full
   comparison.
-- **Preview models are `global`-endpoint only on Cloud.** `gemini-3.1-pro-preview`
-  404s on regional endpoints such as `us-central1`; `GOOGLE_CLOUD_LOCATION` must
-  be `global`. This does not apply in API-key mode. If a region is required for
-  data residency, `critic_model` has to move to a GA model.
+- **Gemini 3.x is `global`-endpoint only on Cloud.** Verified 4 Aug 2026 with live
+  calls: both `gemini-3.1-pro-preview` and `gemini-3.6-flash` return 404 from
+  `us-central1` and work from `global`, so `GOOGLE_CLOUD_LOCATION` must be
+  `global`. Not a preview-only restriction. Does not apply in API-key mode.
+- **ADC needs a quota project.** `gcloud` user credentials have none by default;
+  fix with `gcloud auth application-default set-quota-project <PROJECT_ID>` to
+  avoid misleading quota/API-not-enabled errors later.
 - **Never move to a Gemini 2.5 model** — that generation shuts down October 2026.
 - **An agent with `output_schema` cannot have tools or hand off.** This is why
   `research_evaluator` is tool-free and sets `disallow_transfer_to_*`.

@@ -86,14 +86,19 @@ setting them to conflicting values raises a `ValueError` — use one.
 
 Worth knowing before you pick, because it bites in confusing ways:
 
-- **Preview models are global-endpoint only on Cloud.** `gemini-3.1-pro-preview`
-  — the critic model this project ships with — is served from the `global`
-  endpoint, and regional endpoints such as `us-central1` return **404 model not
-  found**. This is why Option B above sets `GOOGLE_CLOUD_LOCATION=global`. If you
-  need a specific region for data residency, you must move `critic_model` in
-  `config.py` to a generally-available model that your region serves.
-- **AI Studio has no such restriction** — an API key reaches preview models
+- **Gemini 3.x models are global-endpoint only on Cloud.** Verified on 4 Aug 2026:
+  *both* models this project ships with — `gemini-3.1-pro-preview` and the stable
+  `gemini-3.6-flash` — return **404 NOT_FOUND** from `us-central1`, and both
+  respond normally from `global`. This is not a preview-only restriction, and it is
+  why Option B above sets `GOOGLE_CLOUD_LOCATION=global`. If you need a specific
+  region for data residency, both models in `config.py` must change to older ones
+  your region actually serves.
+- **AI Studio has no such restriction** — an API key reaches these models
   directly, which is part of why it is the easier starting point.
+- **Set a quota project for ADC.** User credentials from `gcloud` carry no quota
+  project by default, which surfaces later as spurious "quota exceeded" or "API not
+  enabled" errors. Pre-empt it with
+  `gcloud auth application-default set-quota-project YOUR_PROJECT_ID`.
 - **New models usually appear on AI Studio first**, then on Cloud.
 - **Quotas and billing are separate.** AI Studio has a free tier with low rate
   limits; Cloud has no free tier but far higher throughput. The research pipeline
