@@ -262,6 +262,57 @@ def collect_research_sources_callback(callback_context: CallbackContext) -> None
     logger.info("Collected %d unique sources so far.", len(sources))
 
 
+def record_disputed_findings_callback(callback_context: CallbackContext) -> None:
+    """Keep every reviewer objection, so challenged figures stay challenged.
+
+    The evidence base is append-only, so a figure the reviewer rejects cannot be
+    edited out of it. Instead the objection is recorded here and enforced at the
+    composer, which is the only place that decides what a reader actually sees.
+    """
+    evaluation = callback_context.state.get("research_evaluation") or {}
+    comment = (evaluation.get("comment") or "").strip()
+    if evaluation.get("grade") == "pass" or not comment:
+        return None
+
+    disputed: list = list(callback_context.state.get("disputed_figures", []))
+    if comment not in disputed:  # loops can repeat a verdict verbatim
+        disputed.append(comment)
+        callback_context.state["disputed_figures"] = disputed
+        logger.info("Recorded reviewer objection %d.", len(disputed))
+    return None
+
+
+def merge_new_findings_callback(callback_context: CallbackContext) -> None:
+    """Append this round's findings to the evidence base instead of replacing it.
+
+    The executor writes only new material to 'new_findings'; this appends it under
+    a round heading. Earlier rounds become immutable, which is the whole point: a
+    model that rewrites 20k tokens of findings every round quietly drops some and
+    invents others, so the rewrite is removed rather than discouraged.
+    """
+    collect_research_sources_callback(callback_context)
+
+    new_findings = (callback_context.state.get("new_findings") or "").strip()
+    if not new_findings:
+        logger.info("No new findings this round; evidence base unchanged.")
+        return None
+
+    existing = callback_context.state.get("section_research_findings") or ""
+    round_number = callback_context.state.get("refinement_round", 0) + 1
+    callback_context.state["refinement_round"] = round_number
+    callback_context.state["section_research_findings"] = (
+        f"{existing}\n\n---\n\n## Additional findings - refinement round "
+        f"{round_number}\n\n{new_findings}"
+    )
+    logger.info(
+        "Appended round %d: +%d chars (base now %d).",
+        round_number,
+        len(new_findings),
+        len(callback_context.state["section_research_findings"]),
+    )
+    return None
+
+
 def finalize_report_callback(
     callback_context: CallbackContext,
 ) -> Optional[genai_types.Content]:
@@ -478,6 +529,7 @@ research_evaluator = LlmAgent(
     include_contents="none",
     disallow_transfer_to_parent=True,
     disallow_transfer_to_peers=True,
+    after_agent_callback=record_disputed_findings_callback,
     after_model_callback=track_model_usage_callback,
 )
 
@@ -487,9 +539,12 @@ enhanced_search_executor = LlmAgent(
     description="Closes the gaps the reviewer identified and re-emits the evidence base.",
     instruction=prompts.ENHANCED_SEARCH_EXECUTOR,
     tools=[google_search],
-    output_key="section_research_findings",
+    # Writes ONLY new material; merge_new_findings_callback appends it to the
+    # evidence base. Never point this back at section_research_findings - that
+    # restores the rewrite-everything loop that dropped and invented findings.
+    output_key="new_findings",
     include_contents="none",
-    after_agent_callback=collect_research_sources_callback,
+    after_agent_callback=merge_new_findings_callback,
     after_model_callback=track_model_usage_callback,
 )
 

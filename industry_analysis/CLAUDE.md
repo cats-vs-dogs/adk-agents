@@ -72,6 +72,29 @@ count model calls, not searches. Judging the pipeline by event count understates
 it by roughly an order of magnitude — a mistake that once led to the wrong
 diagnosis here.
 
+## The evidence base is append-only - do not undo this
+
+`enhanced_search_executor` writes **only new material** to `new_findings`;
+`merge_new_findings_callback` appends it to `section_research_findings` under a
+round heading. Earlier rounds are immutable.
+
+Never point the executor's `output_key` back at `section_research_findings`. That
+was the original design and it failed badly: told to "return the complete merged
+evidence base", the model rewrote ~20k tokens every round, and measurement across
+a live run showed it
+
+- **dropped 42% of the researcher's findings on the first pass** (57,626 chars in,
+  33,420 out), then
+- regrew the base each round by inventing figures to fill what it had lost.
+
+The critic's five verdicts each named a *different* set of fabrications, none
+repeating, and the comments got longer rather than shorter. The refinement loop
+was a fabrication generator: more rounds meant more invented numbers, so it could
+never converge and always hit `max_search_iterations`.
+
+Removing the rewrite removes the mechanism. A model cannot corrupt findings it is
+never asked to reproduce.
+
 ## Fabrication control
 
 The critic detects invented figures by cross-checking them against the search log.
@@ -79,11 +102,15 @@ That detection is worthless unless something acts on it, so:
 
 - `research_evaluator` must **quote the offending figure verbatim**, because its
   comment is what the next agent uses to hunt the figure down.
-- `enhanced_search_executor` has exactly two permitted responses to a flagged
-  figure: source it, or **delete it** and record a declared gap. Hedging it into
-  "approximately" counts as keeping it.
-- `report_composer` must not publish an unsourced figure at all, hedged or
-  otherwise.
+- `record_disputed_findings_callback` appends every failing verdict to
+  `state["disputed_figures"]`. Because the evidence base is append-only, a
+  rejected figure cannot be edited out of it - so it is **quarantined** instead
+  and enforced at the composer, the only place that decides what a reader sees.
+- `research_evaluator` is told **not to re-flag** anything already quarantined,
+  and to judge only material added since its last review. Without this the loop
+  cannot converge, since the rejected figures are still sitting in the base.
+- `report_composer` receives the quarantine list and must publish nothing on it
+  unless a later round attached a source - hedged or otherwise.
 - `finalize_report_callback` prepends a warning banner whenever the final grade is
   not `pass`, driven by `state["research_evaluation"]` rather than by asking the
   composer to admit it. An absent or missing grade is treated as *not* passed —

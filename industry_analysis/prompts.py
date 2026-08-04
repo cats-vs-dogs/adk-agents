@@ -432,11 +432,28 @@ An honestly declared gap ("no published figure for X; the nearest available is Y
 is **not** a reason to fail. That is good research practice. Fail the work for
 *silent* gaps and invented numbers, never for admitted ones.
 
+## Do not re-flag what is already quarantined
+
+The evidence base is **append-only**: earlier rounds are kept verbatim and cannot
+be edited, so a figure you rejected last round is still sitting there. That is
+expected and is not a defect.
+
+Every objection you raise is recorded permanently, and the report composer is
+forbidden from publishing anything on that list unless a source has since been
+found. **A quarantined figure is already dealt with.** Raising it again cannot
+improve the report and will stop the loop from ever converging.
+
+So: judge **only the material added since your last review**, plus whether the
+plan's goals are now covered. If this round added nothing wrong and the goals are
+met, grade `pass` - even if earlier rounds contain figures you rejected, because
+those are already excluded from the report.
+
 ## Grade `pass` only when
 
 Every plan goal has sourced, dated evidence behind it; the numbers are attributed
 and correctly labelled as reported, estimated or forecast; and remaining gaps are
-explicitly declared rather than papered over.
+explicitly declared rather than papered over. Judge this against the evidence base
+as a whole minus anything already quarantined.
 
 ## Output
 
@@ -470,6 +487,10 @@ fence, no commentary around it.
 ## The evidence base under review
 
 {section_research_findings?}
+
+## Already quarantined by your earlier reviews - excluded from the report, do not raise again
+
+{disputed_figures?}
 """
 
 ENHANCED_SEARCH_EXECUTOR = f"""
@@ -492,38 +513,43 @@ Today is {TODAY}.
 
 ## Purging unsupported figures - do this every round
 
-Where the reviewer says a figure is unsupported or fabricated, you have exactly
-two permitted outcomes:
+Where the reviewer says a figure is unsupported or fabricated:
 
-1. **Find it.** Search for it properly. If a source turns up, keep the figure and
-   attach that source to it.
-2. **Delete it.** If searching does not produce a source, **remove the figure from
-   the evidence base entirely** and replace it with a declared gap: "no published
-   figure found for X; nearest available is Y (source)".
+1. **Search for it properly.** If a source turns up, report the figure again with
+   that source attached. That is how a challenged figure gets rehabilitated.
+2. **If no source turns up, say so** - "no published figure found for X; nearest
+   available is Y (source)" - and move on.
 
-There is no third option. Leaving a flagged figure in place unsourced, softening
-it with "approximately" or "industry estimates suggest", or moving it somewhere
-quieter all count as keeping it, and it will be flagged again next round.
+Never restate a challenged figure without a source, and never soften one into
+"approximately" or "industry estimates suggest". A figure you cannot source is
+excluded from the report automatically; trying to keep it alive only wastes a
+round. **Failing to source a number is a normal outcome, not a failure of yours.**
 
-This matters more than anything else you do here. A figure that survives review
-unsourced ends up in the final report wearing a citation, where the reader has no
-way to tell it apart from a real one. **Deleting a number you cannot source is a
-success, not a loss** - the report is allowed to have gaps, but it is not allowed
-to have inventions.
+## Output - read this carefully, it is not what you might assume
 
-Apply this to every figure the reviewer named, and to any others you notice while
-working that have no logged query behind them.
+Output **only the new material from this round.** Do not reproduce the existing
+evidence base. Do not restate findings that are already recorded. Do not rewrite,
+reorganise or "tidy" earlier rounds.
 
-## Output
+Your output is **appended** to the evidence base automatically. Everything already
+there is kept, permanently and exactly as written, whether or not you mention it.
+Repeating it wastes tokens; rewriting it destroys work, because every rewrite
+quietly drops findings and fills the gaps with plausible inventions.
 
-Return the **complete, merged evidence base** - everything that was already there,
-plus what you just found, organised under the same sections. Your output replaces
-the previous version wholesale, so anything you omit is lost. Never return only
-the new material.
+Structure your output as:
 
-**Carry the search log forward and extend it.** Append every query you ran this
-round to the existing table, so the log always accounts for the whole run. Dropping
-it reads as if no searching happened and will fail the next review.
+**1. Search log for this round** - the same table format, covering only the
+queries you ran just now. Number them continuing from the last round.
+
+**2. New findings** - grouped under the outline's sections, each with figure,
+unit, period and source.
+
+**3. Resolved challenges** - for each figure the reviewer questioned, one line:
+the figure, and either the source you found or `no source found`.
+
+If a round genuinely produced nothing new, say so in one line rather than padding.
+An honest empty round is fine; a round that invents material to look productive is
+the single worst thing you can do here.
 
 Keep every source URL attached to its finding.
 """ + """
@@ -535,7 +561,7 @@ Keep every source URL attached to its finding.
 
 {report_sections?}
 
-## The current evidence base, which you must return in full plus your additions
+## The evidence base so far - context only, ALREADY SAVED, do not reproduce it
 
 {section_research_findings?}
 """
@@ -567,8 +593,21 @@ Never place a citation tag on a claim that the evidence base does not support.
 
 ## Figures you must not publish
 
-The evidence base may still contain figures that were challenged and never
-sourced, or that are marked as gaps. **Do not put them in the report.**
+**A list of quarantined figures appears at the end of this instruction.** It holds
+every objection the reviewer raised during research. The evidence base is
+append-only, so those figures are still sitting in it - being present there means
+nothing about whether they are true.
+
+For each one, exactly one question: **has a source since been attached to it in a
+later round?** If yes, publish it with that source. If no, it does not appear in
+the report in any form.
+
+Read that list before you write anything, and check it again before you finish.
+It is the difference between a report a reader can rely on and one that merely
+looks like it.
+
+The evidence base may also contain other figures that were never sourced, or are
+marked as gaps. **Do not put those in either.**
 
 - A figure with no source attached in the evidence base does not go in - not in
   the prose, not in a table, not in a footnote.
@@ -636,6 +675,10 @@ to the user.
 ## Available sources - use only these ids in citation tags
 
 {citation_sources?}
+
+## QUARANTINED - every figure named here is banned unless a later round sourced it
+
+{disputed_figures?}
 """
 
 INTERACTIVE_PLANNER = f"""
