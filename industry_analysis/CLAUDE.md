@@ -27,12 +27,13 @@ interactive_planner_agent          root; the only agent the user talks to
   |- plan_generator (as a tool)    drafts and revises the tagged plan
   \- research_pipeline (Sequential)  runs only after explicit approval
        |- section_planner              -> report_sections
-       |- research_query_planner       -> search_queries
+       |- research_query_planner       -> search_queries (24+ explicit queries)
        |- section_researcher           -> section_research_findings
-       |- iterative_refinement_loop (Loop, max 3)
+       |- iterative_refinement_loop (Loop, max config.max_search_iterations = 5)
        |    |- research_evaluator      -> research_evaluation (pass/fail)
+       |    |                             + appends to disputed_figures
        |    |- escalation_checker      breaks the loop on 'pass'
-       |    \- enhanced_search_executor-> section_research_findings (merged)
+       |    \- enhanced_search_executor-> new_findings, APPENDED to the base
        \- report_composer              -> final_cited_report
 ```
 
@@ -217,14 +218,36 @@ from injected state, not conversation history. If you add an agent that seems to
 - **Models, loop count, default market, output folder** -> `config.py`.
 - **The graph itself** -> `agent.py`. Changing it should be rare.
 
-## Verified so far
+## State of the prototype
 
-- Graph imports and assembles correctly on ADK 2.6.2 / Python 3.12.10.
-- `adk web` discovers the agent (`/list-apps` returns `["industry_analysis"]`).
-- Callbacks unit-tested with stubs: source dedup, id stability across refinement
-  rounds, all three `<cite>` tag forms, hallucinated-id stripping, file save with
-  no-clobber, sources appendix.
+Working end to end on ADK 2.6.2 / Python 3.12.10, verified across five live runs
+on 4-5 Aug 2026 (Cloud auth, `global` endpoint).
 
-**Not yet verified end-to-end**: no live model run has happened, because
-Application Default Credentials were not set up on this machine. The first real
-run is still ahead — see README.
+| Run | Sector | Outcome | Rounds | Cost |
+|---|---|---|---|---|
+| 1 | Tourism | failed review 3/3 | hit cap | $1.16 |
+| 2 | Transport | failed review 3/3 | hit cap | $1.42 |
+| 3 | Construction | failed review 5/5 | hit cap | $1.97 |
+| 4 | Construction | **passed** | 4 | $1.01 |
+| 5 | Oil and gas | **passed** | 3 | $0.78 |
+
+Runs 1-3 predate the append-only redesign; 4-5 follow it. Passing runs are both
+cheaper and better, because the expense was the loop failing to converge.
+
+Also verified: `adk web` discovers the agent (`/list-apps` returns
+`["industry_analysis"]`), and the callbacks are unit-tested with stubs — source
+dedup, id stability across rounds, all three `<cite>` tag forms, hallucinated-id
+stripping, no-clobber save, sources appendix, cost arithmetic, review banner,
+append-only merge and quarantine.
+
+## The open question for the next session
+
+**Passing reports are getting shorter**: 2,987 words (run 4), 2,258 (run 5),
+against 4,000-5,000 for the failing runs. The evidence rules are working — the
+long reports were substantially padded with unsourced material — but there is a
+real risk the pipeline now optimises for *passing review* rather than *being
+useful*, since the cheapest way to satisfy the critic is to claim less.
+
+If a report reads thin, the fix is more research depth — raise the query floor
+above 24 in `QUERY_PLANNER`, or add queries per section — **not** relaxing the
+evidence standard. That standard is the reason the reports can be trusted at all.
