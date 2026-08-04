@@ -27,6 +27,7 @@ interactive_planner_agent          root; the only agent the user talks to
   |- plan_generator (as a tool)    drafts and revises the tagged plan
   \- research_pipeline (Sequential)  runs only after explicit approval
        |- section_planner              -> report_sections
+       |- research_query_planner       -> search_queries
        |- section_researcher           -> section_research_findings
        |- iterative_refinement_loop (Loop, max 3)
        |    |- research_evaluator      -> research_evaluation (pass/fail)
@@ -39,7 +40,25 @@ Data moves between agents through **session state**, injected into instructions
 with `{key?}` placeholders (the `?` makes a missing key render empty instead of
 raising). State keys: `research_plan`, `report_sections`,
 `section_research_findings`, `research_evaluation`, `sources`,
-`citation_sources`, `final_cited_report`, `token_usage`.
+`citation_sources`, `final_cited_report`, `token_usage`, `search_queries`.
+
+## Why research is split into two agents
+
+`research_query_planner` writes an explicit numbered list of 24+ targeted queries;
+`section_researcher` then has to execute them and publish a search log accounting
+for each one, which `research_evaluator` checks first and fails hardest on.
+
+This exists because of a measured failure. On the first live run the researcher
+made **one** model call on 5,420 input tokens - barely more than its own
+instruction - emitted 18,900 tokens of "findings", and produced only 3 grounded
+search events in the entire session. It wrote a large evidence base from almost no
+retrieved material, and the critic then failed it three rounds running until the
+loop hit `max_search_iterations`.
+
+Pre-committing the queries in a separate, tool-free step is what stops the model
+collapsing the whole job into a single grounded pass: it cannot quietly skip
+searching when a numbered list of searches is sitting in its context and a log of
+them is what it will be graded on. Keep that separation if you refactor.
 
 ## Cost tracking
 

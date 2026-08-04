@@ -403,6 +403,17 @@ section_planner = LlmAgent(
     after_model_callback=track_model_usage_callback,
 )
 
+research_query_planner = LlmAgent(
+    name="research_query_planner",
+    model=config.worker_model,
+    description="Writes the explicit list of search queries the researcher must run.",
+    instruction=prompts.QUERY_PLANNER,
+    # Deliberately tool-free: pre-committing the queries in a separate step is what
+    # stops the researcher collapsing the whole job into a single grounded pass.
+    output_key="search_queries",
+    after_model_callback=track_model_usage_callback,
+)
+
 section_researcher = LlmAgent(
     name="section_researcher",
     model=config.worker_model,
@@ -462,6 +473,7 @@ research_pipeline = SequentialAgent(
     ),
     sub_agents=[
         section_planner,
+        research_query_planner,
         section_researcher,
         LoopAgent(
             name="iterative_refinement_loop",
