@@ -66,6 +66,15 @@ from injected state, not conversation history. If you add an agent that seems to
   `GOOGLE_GENAI_USE_VERTEXAI`. It is the current name after the Vertex AI ->
   Gemini Enterprise Agent Platform rebrand. Setting both to conflicting values
   raises a `ValueError`.
+- **Two auth modes, one switch.** `GOOGLE_GENAI_USE_ENTERPRISE=0` uses an API key
+  (`GOOGLE_API_KEY`); `=1` uses the Cloud project and **ignores the API key
+  entirely**. A `DefaultCredentialsError` despite a valid key means the flag is
+  still `1`. Both setups can live in `.env` at once. See README for the full
+  comparison.
+- **Preview models are `global`-endpoint only on Cloud.** `gemini-3.1-pro-preview`
+  404s on regional endpoints such as `us-central1`; `GOOGLE_CLOUD_LOCATION` must
+  be `global`. This does not apply in API-key mode. If a region is required for
+  data residency, `critic_model` has to move to a GA model.
 - **Never move to a Gemini 2.5 model** — that generation shuts down October 2026.
 - **An agent with `output_schema` cannot have tools or hand off.** This is why
   `research_evaluator` is tool-free and sets `disallow_transfer_to_*`.
