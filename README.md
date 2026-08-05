@@ -175,9 +175,9 @@ If `adk` is not on your PATH, either activate the environment first
 
 ## Credits
 
-Agents here often start from published samples rather than from scratch. Each
-agent credits its own sources in its own `README.md`, so the attribution stays
-next to the code it describes.
+Some agents here are written from scratch; others start from a published sample.
+Where one does, it credits its sources in its own `README.md`, so the attribution
+stays next to the code it describes.
 
 - **`industry_analysis/`** adapts Google's **Deep Search** sample (formerly
   *gemini-fullstack*) from
