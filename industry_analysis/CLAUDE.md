@@ -17,6 +17,38 @@ Run from the **parent** directory (`adk-agents/`), not from `industry_analysis/`
 `adk web` treats each subdirectory as an agent, so from the parent it finds
 `industry_analysis`; from inside it finds nothing. Verified working.
 
+## Provenance
+
+The architecture is **adapted from Google's Deep Search sample** (formerly
+*gemini-fullstack*) in
+[google/adk-samples](https://github.com/google/adk-samples/tree/main/python/agents/deep-search),
+Apache 2.0. Inherited from it:
+
+- the plan **tag vocabulary** (`[RESEARCH]`, `[DELIVERABLE]`, `[MODIFIED]`,
+  `[NEW]`, `[IMPLIED]`) and the human-approval gate
+- the **pipeline shape** — outline → search → critique → refine → compose — with
+  an `interactive_planner_agent` holding `plan_generator` as an `AgentTool` and
+  delegating to a `SequentialAgent` pipeline
+- the `LoopAgent` + `EscalationChecker` pattern for exiting on a critic's `pass`
+- the `<cite source="src-N"/>` convention and the two callbacks that harvest
+  grounding metadata and rewrite the tags into markdown links
+
+Diverged from the sample here, and deliberately:
+
+- `research_query_planner` — the sample has no equivalent; added after measuring
+  that a single researcher agent under-searches
+- **append-only evidence base** with quarantined figures; the sample's executor
+  rewrites the whole base each round, which is precisely the behaviour that made
+  this pipeline invent figures (see below)
+- domain specialisation: Bulgaria/EU/global framing, named primary sources, and
+  the evidence standard shared by researcher, critic and composer
+- deterministic controls the sample does not have: per-run cost reporting and the
+  failed-review warning banner
+
+When consulting the sample for reference, remember it pins `google-adk>=1.8.0`
+while this runs on 2.x, and that these divergences are load-bearing rather than
+stylistic — do not "restore" them.
+
 ## Architecture
 
 Four Python files. `agent.py` holds the graph, `prompts.py` holds every

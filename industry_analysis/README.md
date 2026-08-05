@@ -44,7 +44,27 @@ breakdown for the run.
 - **Gaps are declared, not filled.** Where a figure cannot be found the report
   says so rather than inventing one.
 
+## Credit
+
+The overall shape of this agent is adapted from Google's **Deep Search** sample
+(formerly *gemini-fullstack*) in
+[google/adk-samples](https://github.com/google/adk-samples/tree/main/python/agents/deep-search),
+Apache 2.0. Taken from it:
+
+- The **plan tag vocabulary** — `[RESEARCH]`, `[DELIVERABLE]`, `[MODIFIED]`,
+  `[NEW]`, `[IMPLIED]` — and the human-approval gate before research starts
+- The **pipeline shape**: outline → search → critique → refine → compose, with a
+  loop that exits when a critic agent accepts the evidence
+- The **citation mechanism**: inline tags rewritten into markdown links from
+  collected search-grounding metadata
+
+Built on top of that for this project: the Bulgaria/EU/global market framing and
+its named primary sources, the evidence standard the researcher and critic are
+held to, a query-planning step that pre-commits searches, an append-only evidence
+base with quarantine for challenged figures, and per-run cost reporting.
+
 ## More
 
 - **[SETUP.md](SETUP.md)** — installation, authentication, models, troubleshooting
 - **[CLAUDE.md](CLAUDE.md)** — architecture and working notes
+- **[RUN_HISTORY.md](RUN_HISTORY.md)** — measurements behind the design decisions
