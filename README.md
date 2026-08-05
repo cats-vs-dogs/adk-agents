@@ -168,5 +168,21 @@ If `adk` is not on your PATH, either activate the environment first
    repeat `__pycache__/` — the root file already covers it.
 7. Add a `README.md`, and a `CLAUDE.md` if the agent has non-obvious conventions.
 8. **Add a row to the agents table at the top of this file.**
-9. Confirm discovery: run `adk web` and check the agent appears, or
-   `curl -s http://127.0.0.1:8000/list-apps`.
+9. If the agent adapts an existing sample or project, credit it in that agent's
+   own `README.md` — see the convention below.
+10. Confirm discovery: run `adk web` and check the agent appears, or
+    `curl -s http://127.0.0.1:8000/list-apps`.
+
+## Credits
+
+Agents here often start from published samples rather than from scratch. Each
+agent credits its own sources in its own `README.md`, so the attribution stays
+next to the code it describes.
+
+- **`industry_analysis/`** adapts Google's **Deep Search** sample (formerly
+  *gemini-fullstack*) from
+  [google/adk-samples](https://github.com/google/adk-samples/tree/main/python/agents/deep-search),
+  Apache 2.0 — specifically its research-plan tag vocabulary and its
+  outline → search → critique → refine → compose pipeline. See
+  [that agent's README](industry_analysis/README.md#credit) for what was taken and
+  what diverges.
